@@ -1,7 +1,8 @@
-package kaleidoscope
+package main
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -30,10 +31,23 @@ func matchTokens(in string, want Token, got Token, err error, t *testing.T) {
 // Test when a correct def keyword is passed to the lexer
 func TestLexerDef(t *testing.T) {
 	in := "def"
+
+	fmt.Println("Making Lexer")
 	lexer := newTestLexer(in)
 
+	fmt.Println("Getting Channel")
+	ch := lexer.Tokens()
+
+	fmt.Println("Running Lexer")
+	go lexer.Run()
+
 	want := DefToken{}
-	got, err := lexer.GetTok()
+
+	fmt.Println("Grabbing token")
+	got := <-ch
+	fmt.Println("Got Token")
+	fmt.Println(got)
+	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
 
