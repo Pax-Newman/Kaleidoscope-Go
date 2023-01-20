@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 )
 
@@ -32,21 +31,13 @@ func matchTokens(in string, want Token, got Token, err error, t *testing.T) {
 func TestLexerDef(t *testing.T) {
 	in := "def"
 
-	fmt.Println("Making Lexer")
 	lexer := newTestLexer(in)
-
-	fmt.Println("Getting Channel")
 	ch := lexer.Tokens()
 
-	fmt.Println("Running Lexer")
 	go lexer.Run()
 
 	want := DefToken{}
-
-	fmt.Println("Grabbing token")
 	got := <-ch
-	fmt.Println("Got Token")
-	fmt.Println(got)
 	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
@@ -55,9 +46,13 @@ func TestLexerDef(t *testing.T) {
 func TestLexerExtern(t *testing.T) {
 	in := "extern"
 	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
 
 	want := ExternToken{}
-	got, err := lexer.GetTok()
+	got := <-ch
+	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
 
@@ -67,9 +62,13 @@ func TestLexerExtern(t *testing.T) {
 func TestLexerIdentifier(t *testing.T) {
 	in := "hello"
 	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
 
 	want := IdentifierToken{"hello"}
-	got, err := lexer.GetTok()
+	got := <-ch
+	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
 
@@ -77,9 +76,13 @@ func TestLexerIdentifier(t *testing.T) {
 func TestLexerNumber(t *testing.T) {
 	in := "9.3"
 	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
 
 	want := NumberToken{9.3}
-	got, err := lexer.GetTok()
+	got := <-ch
+	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
 
@@ -87,9 +90,13 @@ func TestLexerNumber(t *testing.T) {
 func TestLexerBadNumber(t *testing.T) {
 	in := "9.3.3.3.3"
 	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
 
 	want := NumberToken{9.3}
-	got, err := lexer.GetTok()
+	got := <-ch
+	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
 
@@ -98,11 +105,15 @@ func TestLexerBadNumber(t *testing.T) {
 func TestLexerEOF(t *testing.T) {
 	in := "def"
 	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
 
-	// consume def, the next gettok should receive an EOF error and correctly return an EOFToken
-	lexer.GetTok()
+	go lexer.Run()
 
 	want := EOFToken{}
-	got, err := lexer.GetTok()
+	var got Token
+
+	got = <-ch // this should be a deftoken
+	got = <-ch
+	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
