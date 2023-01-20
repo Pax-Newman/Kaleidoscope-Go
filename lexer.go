@@ -1,8 +1,12 @@
-package kaleidoscope
+package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
+	"log"
+	"reflect"
+	"runtime"
 	"strconv"
 	"unicode"
 )
@@ -25,6 +29,7 @@ type NumberToken struct{ float64 }
 type Lexer struct {
 	reader bufio.Reader
 	tokens chan Token
+	err    error
 }
 
 type stateFn func(l *Lexer) stateFn
@@ -37,23 +42,128 @@ func NewLexer(rd io.Reader) *Lexer {
 	}
 }
 
-func (lex Lexer) Run() {
+// Returns a channel to read the lexer's tokens from
+func (lex *Lexer) Tokens() chan Token {
+	return lex.tokens
+}
+
+func GetFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func (lex *Lexer) Run() {
+	fmt.Println("Running inside the goroutine")
 	// Start the state transition loop
 	for state := lexText; state != nil; {
-		state = state(&lex)
+		fname := GetFunctionName(state)
+		fmt.Printf("Now running: %s\n", fname)
+		state = state(lex)
+		// Check for an error & report it
+		if lex.err != nil {
+			log.Fatalf("Error encountered: %s", lex.err)
+		}
 	}
+	fmt.Println("Closing Channel")
 	// Close out our tokens channel
 	close(lex.tokens)
 }
 
-// State func to lex the next token?
-// func lexText(lex *Lexer) stateFn {
-// 	...
-// }
-
-func (lex *Lexer) next() (rune, error) {
+func (lex *Lexer) next() rune {
 	char, _, err := lex.reader.ReadRune()
-	return char, err
+	if err != io.EOF {
+		lex.err = err
+	}
+	return char
+}
+
+func (lex *Lexer) back() {
+	// TODO consider how to handle this error
+	lex.reader.UnreadRune()
+}
+
+func (lex *Lexer) emit(tok Token) {
+	lex.tokens <- tok
+}
+
+// State func to lex the next token?
+func lexText(lex *Lexer) stateFn {
+	nextChar := lex.next()
+	lex.back()
+
+	switch {
+	case unicode.IsNumber(nextChar):
+		return lexNum
+	case unicode.IsLetter(nextChar):
+		return lexIdentifier
+	case unicode.IsSpace(nextChar):
+		return lexSpace
+	case nextChar == 0:
+		return lexEOF
+	}
+	return nil
+}
+
+func lexNum(lex *Lexer) stateFn {
+	unconvertedNum := ""
+	for nextChar := lex.next(); nextChar != 0 && (unicode.IsNumber(nextChar) || nextChar == '.'); {
+		unconvertedNum += string(nextChar)
+		nextChar = lex.next()
+	}
+	lex.back()
+
+	num, err := strconv.ParseFloat(unconvertedNum, 64)
+	if err != nil {
+		lex.err = err
+	}
+	lex.emit(NumberToken{num})
+
+	return lexText
+}
+
+func lexIdentifier(lex *Lexer) stateFn {
+	id := []rune{}
+	for nextChar := lex.next(); nextChar != 0 && (unicode.IsNumber(nextChar) || unicode.IsLetter(nextChar)); {
+		id = append(id, nextChar)
+		nextChar = lex.next()
+	}
+	lex.back()
+
+	idString := string(id)
+	var token Token
+	switch idString {
+	case "def":
+		token = DefToken{}
+	case "extern":
+		token = ExternToken{}
+	default:
+		token = IdentifierToken{idString}
+	}
+	lex.emit(token)
+
+	return lexText
+}
+
+func lexSpace(lex *Lexer) stateFn {
+	// move through the whitespace until it's no longer whitespace
+	for nextChar := lex.next(); nextChar != 0 && unicode.IsSpace(nextChar); {
+		nextChar = lex.next()
+	}
+	// move back one rune to make up for using next() to look at it in the while loop
+	lex.back()
+	// go back to lexing the next piece of text
+	return lexText
+}
+
+func lexEOF(lex *Lexer) stateFn {
+	_, _, err := lex.reader.ReadRune()
+	if err == io.EOF {
+		lex.emit(EOFToken{})
+	} else {
+		// if it's not an EOF error then handle it appropriately
+		lex.err = err
+	}
+	// Since we hit EOF, end the lexing session
+	return nil
 }
 
 // Gets the next token from the reader
