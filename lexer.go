@@ -25,11 +25,14 @@ type ExternToken struct{}
 type IdentifierToken struct{ string }
 type NumberToken struct{ float64 }
 
+// TODO add line and maybe col fields to identify where an error occured
 // Lexer Class
 type Lexer struct {
 	reader bufio.Reader
 	tokens chan Token
 	err    error
+	line   int
+	col    int
 }
 
 type stateFn func(l *Lexer) stateFn
@@ -39,6 +42,8 @@ func NewLexer(rd io.Reader) *Lexer {
 	return &Lexer{
 		reader: *bufio.NewReader(rd),
 		tokens: make(chan Token),
+		line:   0,
+		col:    0,
 	}
 }
 
@@ -60,7 +65,7 @@ func (lex *Lexer) Run() {
 		state = state(lex)
 		// Check for an error & report it
 		if lex.err != nil {
-			log.Fatalf("Error encountered: %s", lex.err)
+			log.Fatalf("Error encountered at line %d:%d -> %s", lex.line, lex.col, lex.err)
 		}
 	}
 	fmt.Println("Closing Channel")
@@ -73,12 +78,30 @@ func (lex *Lexer) next() rune {
 	if err != io.EOF {
 		lex.err = err
 	}
+	lex.col += 1
 	return char
 }
 
 func (lex *Lexer) back() {
 	// TODO consider how to handle this error
 	lex.reader.UnreadRune()
+	if char := lex.peek(); char == '\n' || char == '\r' {
+		lex.col = 0
+		lex.line -= 1
+	} else {
+		lex.col -= 1
+	}
+}
+
+func (lex *Lexer) peek() rune {
+	char, err := lex.reader.Peek(0)
+	if err != io.EOF {
+		lex.err = err
+	}
+	if len(char) <= 0 {
+		return 0
+	}
+	return rune(char[0])
 }
 
 func (lex *Lexer) emit(tok Token) {
@@ -146,6 +169,10 @@ func lexIdentifier(lex *Lexer) stateFn {
 func lexSpace(lex *Lexer) stateFn {
 	// move through the whitespace until it's no longer whitespace
 	for nextChar := lex.next(); nextChar != 0 && unicode.IsSpace(nextChar); {
+		if nextChar == '\n' || nextChar == '\r' {
+			lex.line += 1
+			lex.col = 0
+		}
 		nextChar = lex.next()
 	}
 	// move back one rune to make up for using next() to look at it in the while loop
