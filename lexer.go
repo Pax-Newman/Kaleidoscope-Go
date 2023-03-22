@@ -14,6 +14,9 @@ import (
 // Generic token interface
 type Token interface{}
 
+// Error token
+type ErrorToken struct{ string }
+
 // EOF marker
 type EOFToken struct{}
 
@@ -71,6 +74,11 @@ func (lex *Lexer) Run() {
 	fmt.Println("Closing Channel")
 	// Close out our tokens channel
 	close(lex.tokens)
+}
+
+func (lex *Lexer) errorf(format string, args ...interface{}) stateFn {
+	lex.tokens <- ErrorToken{ fmt.Sprintf(format, args...) }
+	return nil
 }
 
 func (lex *Lexer) next() rune {
