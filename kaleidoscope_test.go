@@ -75,22 +75,50 @@ func TestLexerIdentifier(t *testing.T) {
 	matchTokens(in, want, got, t)
 }
 
+// Test when a correct int is passed to the lexer
+func TestLexerInt(t *testing.T) {
+	in := "9"
+	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
+
+	want := NumberToken{"9"}
+	got := <-ch
+
+	matchTokens(in, want, got, t)
+}
+
+// Test when a correct hex number is passed to the lexer
+func TestLexerHex(t *testing.T) {
+	in := "0xFF"
+	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
+
+	want := NumberToken{"0xFF"}
+	got := <-ch
+
+	matchTokens(in, want, got, t)
+}
+
 // Test when a correct float is passed to the lexer
-func TestLexerNumber(t *testing.T) {
+func TestLexerFloat(t *testing.T) {
 	in := "9.3"
 	lexer := newTestLexer(in)
 	ch := lexer.Tokens()
 
 	go lexer.Run()
 
-	want := NumberToken{in}
+	want := NumberToken{"9.3"}
 	got := <-ch
 
 	matchTokens(in, want, got, t)
 }
 
 // Test when an incorrect float is passed to the lexer
-func TestLexerBadNumber(t *testing.T) {
+func TestLexerBadFloat(t *testing.T) {
 	in := "9.3.3.3.3"
 	lexer := newTestLexer(in)
 	ch := lexer.Tokens()
