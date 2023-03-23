@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -104,6 +105,22 @@ func (lex *Lexer) peek() (rune, error) {
 	}	
 
 	return rune(char[0]), err
+}
+
+// Consumes one rune if it's in a valid set of runes
+func (lex *Lexer) accept(valid string) bool {
+	if strings.IndexRune(valid, lex.next()) >= 0 {
+		return true
+	} else {
+		lex.back()
+		return false
+	}
+}
+
+// Consumes a series of runes that are all in a valid set of runes
+func (lex *Lexer) acceptRun(valid string) {
+	for strings.IndexRune(valid, lex.next()) >= 0 {}
+	lex.back()
 }
 
 func (lex *Lexer) emit(tok Token) {
