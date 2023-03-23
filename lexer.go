@@ -98,12 +98,8 @@ func (lex *Lexer) back() error {
 func (lex *Lexer) peek() (rune, error) {
 	char, err := lex.reader.Peek(1)
 	if err == io.EOF {
-		err = nil
-	}
-	if len(char) <= 0 {
 		return 0, nil
-	}	
-
+	}
 	return rune(char[0]), err
 }
 
