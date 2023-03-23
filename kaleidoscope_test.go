@@ -108,6 +108,7 @@ func TestLexerBadNumber(t *testing.T) {
 
 // -------------------------- EOF Marker
 
+// Test if the lexer properly returns an EOF token after lexing everything else
 func TestLexerEOF(t *testing.T) {
 	in := "def"
 	lexer := newTestLexer(in)
@@ -123,6 +124,7 @@ func TestLexerEOF(t *testing.T) {
 	matchTokens(in, want, got, t)
 }
 
+// Test if the lexer can properly handle an empty input
 func TestEmpty(t *testing.T) {
 	in := ""
 	lexer := newTestLexer(in)
