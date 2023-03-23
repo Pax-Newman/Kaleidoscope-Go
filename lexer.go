@@ -80,7 +80,7 @@ func (lex *Lexer) Run() {
 	close(lex.tokens)
 }
 
-// Prints an error message and halts the lexer
+// Prints an error message and provides a nil stateFn to halt the lexer
 func (lex *Lexer) errorf(format string, args ...interface{}) stateFn {
 	lex.tokens <- ErrorToken{ fmt.Sprintf(format, args...) }
 	return nil
