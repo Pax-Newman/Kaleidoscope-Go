@@ -193,6 +193,8 @@ func lexNum(lex *Lexer) stateFn {
 
 // Lexes the next identifier
 func lexIdentifier(lex *Lexer) stateFn {
+	// Consume runes until they aren't letters or numbers
+	// TODO Change this to possibly blacklist bad characters like whitespace, rather than whitelist numbers & letters
 	id := []rune{}
 	for nextChar := lex.next(); nextChar != 0 && (unicode.IsNumber(nextChar) || unicode.IsLetter(nextChar)); {
 		id = append(id, nextChar)
@@ -200,6 +202,7 @@ func lexIdentifier(lex *Lexer) stateFn {
 	}
 	lex.back()
 
+	// Identify the token and emit it
 	idString := string(id)
 	var token Token
 	switch idString {
