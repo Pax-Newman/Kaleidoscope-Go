@@ -60,7 +60,7 @@ func GetFunctionName(i interface{}) string {
 }
 
 func (lex *Lexer) Run() {
-	fmt.Println("Running inside the goroutine")
+	// fmt.Println("Running inside the goroutine")
 	// Start the state transition loop
 	for state := lexText; state != nil; {
 		// fname := GetFunctionName(state)
@@ -71,7 +71,7 @@ func (lex *Lexer) Run() {
 			log.Fatalf("Error encountered at line %d:%d -> %s", lex.line, lex.col, lex.err)
 		}
 	}
-	fmt.Println("Closing Channel")
+	// fmt.Println("Closing Channel")
 	// Close out our tokens channel
 	close(lex.tokens)
 }
@@ -86,30 +86,24 @@ func (lex *Lexer) next() rune {
 	if err != io.EOF {
 		lex.err = err
 	}
-	lex.col += 1
 	return char
 }
 
-func (lex *Lexer) back() {
-	// TODO consider how to handle this error
-	lex.reader.UnreadRune()
-	if char := lex.peek(); char == '\n' || char == '\r' {
-		lex.col = 0
-		lex.line -= 1
-	} else {
-		lex.col -= 1
-	}
+func (lex *Lexer) back() error {
+	err := lex.reader.UnreadRune()
+	return err
 }
 
-func (lex *Lexer) peek() rune {
-	char, err := lex.reader.Peek(0)
-	if err != io.EOF {
-		lex.err = err
+func (lex *Lexer) peek() (rune, error) {
+	char, err := lex.reader.Peek(1)
+	if err == io.EOF {
+		err = nil
 	}
 	if len(char) <= 0 {
-		return 0
-	}
-	return rune(char[0])
+		return 0, nil
+	}	
+
+	return rune(char[0]), err
 }
 
 func (lex *Lexer) emit(tok Token) {
@@ -118,9 +112,12 @@ func (lex *Lexer) emit(tok Token) {
 
 // State func to lex the next token?
 func lexText(lex *Lexer) stateFn {
-	nextChar := lex.next()
-	lex.back()
+	nextChar, err := lex.peek()
 
+	if err != nil {
+		return lex.errorf("lexText: %s", err.Error())
+	}
+	
 	switch {
 	case unicode.IsNumber(nextChar):
 		return lexNum
@@ -140,11 +137,14 @@ func lexNum(lex *Lexer) stateFn {
 		unconvertedNum += string(nextChar)
 		nextChar = lex.next()
 	}
-	lex.back()
+	err := lex.back()
+	if err != nil {
+		return lex.errorf("lexNum: %s", err.Error())
+	}
 
 	num, err := strconv.ParseFloat(unconvertedNum, 64)
 	if err != nil {
-		return lex.errorf(err.Error())
+		return lex.errorf("lexNum: %s", err.Error())
 	}
 	lex.emit(NumberToken{num})
 
@@ -184,7 +184,10 @@ func lexSpace(lex *Lexer) stateFn {
 		nextChar = lex.next()
 	}
 	// move back one rune to make up for using next() to look at it in the while loop
-	lex.back()
+	err := lex.back()
+	if err != nil {
+		return lex.errorf("lexSpace: %s", err.Error())
+	}
 	// go back to lexing the next piece of text
 	return lexText
 }
