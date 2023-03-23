@@ -63,8 +63,8 @@ func (lex *Lexer) Run() {
 	fmt.Println("Running inside the goroutine")
 	// Start the state transition loop
 	for state := lexText; state != nil; {
-		fname := GetFunctionName(state)
-		fmt.Printf("Now running: %s\n", fname)
+		// fname := GetFunctionName(state)
+		// fmt.Printf("Now running: %s\n", fname)
 		state = state(lex)
 		// Check for an error & report it
 		if lex.err != nil {
@@ -144,7 +144,7 @@ func lexNum(lex *Lexer) stateFn {
 
 	num, err := strconv.ParseFloat(unconvertedNum, 64)
 	if err != nil {
-		lex.err = err
+		return lex.errorf(err.Error())
 	}
 	lex.emit(NumberToken{num})
 
