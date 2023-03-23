@@ -21,7 +21,15 @@ func matchTokens(in string, want Token, got Token, err error, t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	} else if want != got {
-		t.Fatalf(`GetTok(%s) = %T%s, %s want %T%s, nil`, in, got, got, err, want, want)
+		t.Fatalf(`Lexer(%s) returned %T%s, %s... expected %T%s, nil`, in, got, got, err, want, want)
+	}
+}
+
+func matchErrors(in string, want error, got error, t *testing.T) {
+	if got == nil {
+		t.Fatalf(`Lexer(%s) did not return an error... expected %s`, in, want)
+	} else if want != got {
+		t.Fatalf(`Lexer(%s) returned %s... expected %s`, in, got, want)
 	}
 }
 
@@ -95,7 +103,10 @@ func TestLexerBadNumber(t *testing.T) {
 	go lexer.Run()
 
 	want := NumberToken{9.3}
+	
+	// Consume the token to trigger the error
 	got := <-ch
+	
 	err := lexer.err
 	matchTokens(in, want, got, err, t)
 }
