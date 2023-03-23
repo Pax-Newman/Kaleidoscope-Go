@@ -15,20 +15,23 @@ import (
 type Token interface{}
 
 // Error token
+
 type ErrorToken struct{ string }
 
 // EOF marker
+
 type EOFToken struct{}
 
 // Keywords
+
 type DefToken struct{}
 type ExternToken struct{}
 
 // Primary
+
 type IdentifierToken struct{ string }
 type NumberToken struct{ string }
 
-// TODO add line and maybe col fields to identify where an error occured
 // Lexer Class
 type Lexer struct {
 	reader bufio.Reader
@@ -59,6 +62,7 @@ func GetFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
+// Begins lexing the input and outputting tokens through the tokens channel
 func (lex *Lexer) Run() {
 	// fmt.Println("Running inside the goroutine")
 	// Start the state transition loop
@@ -76,11 +80,13 @@ func (lex *Lexer) Run() {
 	close(lex.tokens)
 }
 
+// Prints an error message and halts the lexer
 func (lex *Lexer) errorf(format string, args ...interface{}) stateFn {
 	lex.tokens <- ErrorToken{ fmt.Sprintf(format, args...) }
 	return nil
 }
 
+// Consumes and returns the next rune
 func (lex *Lexer) next() rune {
 	char, _, err := lex.reader.ReadRune()
 	if err != io.EOF {
@@ -125,11 +131,12 @@ func (lex *Lexer) acceptRun(valid string) []rune {
 	return runes
 }
 
+// Emits a single token through the lexer's token channel
 func (lex *Lexer) emit(tok Token) {
 	lex.tokens <- tok
 }
 
-// State func to lex the next token?
+// Determines the appropriate lexing stateFn to use next
 func lexNext(lex *Lexer) stateFn {
 	nextChar, err := lex.peek()
 
@@ -137,6 +144,7 @@ func lexNext(lex *Lexer) stateFn {
 		return lex.errorf("lexText: %s", err.Error())
 	}
 	
+	// Move to the next state based on what the next rune in the input is
 	switch {
 	case unicode.IsNumber(nextChar):
 		return lexNum
@@ -150,6 +158,7 @@ func lexNext(lex *Lexer) stateFn {
 	return nil
 }
 
+// Lexes the next number
 func lexNum(lex *Lexer) stateFn {
 	rawNum := ""
 	
@@ -173,7 +182,8 @@ func lexNum(lex *Lexer) stateFn {
 		rawNum += string(decPoint)
 		rawNum += string(lex.acceptRun(digits))
 	}
-
+	
+	// accept and acceptRun will insert 0-value runes into our number, here we remove them to clean the number
 	cleanNum := strings.ReplaceAll(rawNum, string(rune(0)), "")
 
 	lex.emit(NumberToken{cleanNum})
@@ -181,6 +191,7 @@ func lexNum(lex *Lexer) stateFn {
 	return lexNext
 }
 
+// Lexes the next identifier
 func lexIdentifier(lex *Lexer) stateFn {
 	id := []rune{}
 	for nextChar := lex.next(); nextChar != 0 && (unicode.IsNumber(nextChar) || unicode.IsLetter(nextChar)); {
@@ -204,6 +215,7 @@ func lexIdentifier(lex *Lexer) stateFn {
 	return lexNext
 }
 
+// Lexes the next whitespace
 func lexSpace(lex *Lexer) stateFn {
 	// move through the whitespace until it's no longer whitespace
 	for nextChar := lex.next(); nextChar != 0 && unicode.IsSpace(nextChar); {
@@ -222,6 +234,7 @@ func lexSpace(lex *Lexer) stateFn {
 	return lexNext
 }
 
+// Lexes the EOF
 func lexEOF(lex *Lexer) stateFn {
 	_, _, err := lex.reader.ReadRune()
 	if err == io.EOF {
