@@ -7,7 +7,6 @@ import (
 	"log"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"unicode"
 )
@@ -27,7 +26,7 @@ type ExternToken struct{}
 
 // Primary
 type IdentifierToken struct{ string }
-type NumberToken struct{ float64 }
+type NumberToken struct{ string }
 
 // TODO add line and maybe col fields to identify where an error occured
 // Lexer Class
@@ -103,20 +102,27 @@ func (lex *Lexer) peek() (rune, error) {
 	return rune(char[0]), err
 }
 
-// Consumes one rune if it's in a valid set of runes
-func (lex *Lexer) accept(valid string) bool {
-	if strings.IndexRune(valid, lex.next()) >= 0 {
-		return true
+// Consumes one rune if it's in a valid set of runes.
+// Returns the consumed rune, or 0 if it wasn't valid
+func (lex *Lexer) accept(valid string) rune {
+	next := lex.next()
+	if strings.IndexRune(valid, next) >= 0 {
+		return next
 	} else {
 		lex.back()
-		return false
+		return 0
 	}
 }
 
 // Consumes a series of runes that are all in a valid set of runes
-func (lex *Lexer) acceptRun(valid string) {
-	for strings.IndexRune(valid, lex.next()) >= 0 {}
+func (lex *Lexer) acceptRun(valid string) []rune {
+	var runes []rune
+	for next := lex.next(); strings.IndexRune(valid, next) >= 0; next = lex.next() {
+		runes = append(runes, next)
+	}
 	lex.back()
+
+	return runes
 }
 
 func (lex *Lexer) emit(tok Token) {
@@ -145,21 +151,32 @@ func lexNext(lex *Lexer) stateFn {
 }
 
 func lexNum(lex *Lexer) stateFn {
-	unconvertedNum := ""
-	for nextChar := lex.next(); nextChar != 0 && (unicode.IsNumber(nextChar) || nextChar == '.'); {
-		unconvertedNum += string(nextChar)
-		nextChar = lex.next()
+	rawNum := ""
+	
+	// Catch any leading positive/negative signs
+	rawNum += string(lex.accept("+-"))
+
+	digits := "0123456789"
+	
+	// Catch a hex specifier and augment our valid digits to include hex values
+	hex := string(lex.accept("0") + lex.accept("xX"))
+	if len(hex) >= 2 {
+		digits += "abcdefABCDEF"
 	}
-	err := lex.back()
-	if err != nil {
-		return lex.errorf("lexNum: %s", err.Error())
+	rawNum += hex
+	
+	// Consume the following valid digits
+	rawNum += string(lex.acceptRun(digits))
+
+	// Consume any decimal point and digits following it 
+	if decPoint := lex.accept(".");	decPoint != 0 {
+		rawNum += string(decPoint)
+		rawNum += string(lex.acceptRun(digits))
 	}
 
-	num, err := strconv.ParseFloat(unconvertedNum, 64)
-	if err != nil {
-		return lex.errorf("lexNum: %s", err.Error())
-	}
-	lex.emit(NumberToken{num})
+	cleanNum := strings.ReplaceAll(rawNum, string(rune(0)), "")
+
+	lex.emit(NumberToken{cleanNum})
 
 	return lexNext
 }
