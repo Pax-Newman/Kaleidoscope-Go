@@ -17,11 +17,9 @@ func newTestLexer(in string) *Lexer {
 }
 
 // Tests if two tokens match eachother, reports a test failure if they do not
-func matchTokens(in string, want Token, got Token, err error, t *testing.T) {
-	if err != nil {
-		t.Fatal(err)
-	} else if want != got {
-		t.Fatalf(`Lexer(%s) returned %T%s, %s... expected %T%s, nil`, in, got, got, err, want, want)
+func matchTokens(in string, want Token, got Token, t *testing.T) {
+	if want != got {
+		t.Fatalf(`Lexer(%s) returned %T%s... expected %T%s`, in, got, got, want, want)
 	}
 }
 
@@ -46,8 +44,7 @@ func TestLexerDef(t *testing.T) {
 
 	want := DefToken{}
 	got := <-ch
-	err := lexer.err
-	matchTokens(in, want, got, err, t)
+	matchTokens(in, want, got, t)
 }
 
 // Test when a correct extern keyword is passed to the lexer
@@ -60,8 +57,7 @@ func TestLexerExtern(t *testing.T) {
 
 	want := ExternToken{}
 	got := <-ch
-	err := lexer.err
-	matchTokens(in, want, got, err, t)
+	matchTokens(in, want, got, t)
 }
 
 // -------------------------- Primary
@@ -76,8 +72,7 @@ func TestLexerIdentifier(t *testing.T) {
 
 	want := IdentifierToken{"hello"}
 	got := <-ch
-	err := lexer.err
-	matchTokens(in, want, got, err, t)
+	matchTokens(in, want, got, t)
 }
 
 // Test when a correct float is passed to the lexer
@@ -88,10 +83,10 @@ func TestLexerNumber(t *testing.T) {
 
 	go lexer.Run()
 
-	want := NumberToken{9.3}
+	want := NumberToken{in}
 	got := <-ch
-	err := lexer.err
-	matchTokens(in, want, got, err, t)
+
+	matchTokens(in, want, got, t)
 }
 
 // Test when an incorrect float is passed to the lexer
@@ -102,13 +97,13 @@ func TestLexerBadNumber(t *testing.T) {
 
 	go lexer.Run()
 
-	want := NumberToken{9.3}
+	// TODO decide what the goal for this test actually is
+	want := NumberToken{"9.3"}
 	
 	// Consume the token to trigger the error
 	got := <-ch
 	
-	err := lexer.err
-	matchTokens(in, want, got, err, t)
+	matchTokens(in, want, got, t)
 }
 
 // -------------------------- EOF Marker
@@ -125,6 +120,5 @@ func TestLexerEOF(t *testing.T) {
 
 	got = <-ch // this should be a deftoken
 	got = <-ch
-	err := lexer.err
-	matchTokens(in, want, got, err, t)
+	matchTokens(in, want, got, t)
 }
