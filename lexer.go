@@ -168,7 +168,7 @@ func lexNum(lex *Lexer) stateFn {
 	digits := "0123456789"
 	
 	// Catch a hex specifier and augment our valid digits to include hex values
-	hex := string(lex.accept("0") + lex.accept("xX"))
+	hex := string(lex.accept("0")) + string(lex.accept("xX"))
 	if len(hex) >= 2 {
 		digits += "abcdefABCDEF"
 	}
@@ -182,7 +182,7 @@ func lexNum(lex *Lexer) stateFn {
 		rawNum += string(decPoint)
 		rawNum += string(lex.acceptRun(digits))
 	}
-	
+
 	// accept and acceptRun will insert 0-value runes into our number, here we remove them to clean the number
 	cleanNum := strings.ReplaceAll(rawNum, string(rune(0)), "")
 
