@@ -218,18 +218,8 @@ func lexIdentifier(lex *Lexer) stateFn {
 // Lexes the next whitespace
 func lexSpace(lex *Lexer) stateFn {
 	// move through the whitespace until it's no longer whitespace
-	for nextChar := lex.next(); nextChar != 0 && unicode.IsSpace(nextChar); {
-		if nextChar == '\n' || nextChar == '\r' {
-			lex.line += 1
-			lex.col = 0
-		}
-		nextChar = lex.next()
-	}
-	// move back one rune to make up for using next() to look at it in the while loop
-	err := lex.back()
-	if err != nil {
-		return lex.errorf("lexSpace: %s", err.Error())
-	}
+	lex.acceptRun(" \n\r")
+
 	// go back to lexing the next piece of text
 	return lexNext
 }
@@ -241,7 +231,7 @@ func lexEOF(lex *Lexer) stateFn {
 		lex.emit(EOFToken{})
 	} else {
 		// if it's not an EOF error then handle it appropriately
-		lex.err = err
+		lex.errorf("lexEOF: %s", err)
 	}
 	// Since we hit EOF, end the lexing session
 	return nil
