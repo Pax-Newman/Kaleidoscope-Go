@@ -63,7 +63,7 @@ func GetFunctionName(i interface{}) string {
 func (lex *Lexer) Run() {
 	// fmt.Println("Running inside the goroutine")
 	// Start the state transition loop
-	for state := lexText; state != nil; {
+	for state := lexNext; state != nil; {
 		// fname := GetFunctionName(state)
 		// fmt.Printf("Now running: %s\n", fname)
 		state = state(lex)
@@ -124,7 +124,7 @@ func (lex *Lexer) emit(tok Token) {
 }
 
 // State func to lex the next token?
-func lexText(lex *Lexer) stateFn {
+func lexNext(lex *Lexer) stateFn {
 	nextChar, err := lex.peek()
 
 	if err != nil {
@@ -161,7 +161,7 @@ func lexNum(lex *Lexer) stateFn {
 	}
 	lex.emit(NumberToken{num})
 
-	return lexText
+	return lexNext
 }
 
 func lexIdentifier(lex *Lexer) stateFn {
@@ -184,7 +184,7 @@ func lexIdentifier(lex *Lexer) stateFn {
 	}
 	lex.emit(token)
 
-	return lexText
+	return lexNext
 }
 
 func lexSpace(lex *Lexer) stateFn {
@@ -202,7 +202,7 @@ func lexSpace(lex *Lexer) stateFn {
 		return lex.errorf("lexSpace: %s", err.Error())
 	}
 	// go back to lexing the next piece of text
-	return lexText
+	return lexNext
 }
 
 func lexEOF(lex *Lexer) stateFn {
