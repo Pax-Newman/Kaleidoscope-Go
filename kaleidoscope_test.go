@@ -122,3 +122,16 @@ func TestLexerEOF(t *testing.T) {
 	got = <-ch
 	matchTokens(in, want, got, t)
 }
+
+func TestEmpty(t *testing.T) {
+	in := ""
+	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
+
+	want := EOFToken{}
+	
+	got := <-ch
+	matchTokens(in, want, got, t)
+}
