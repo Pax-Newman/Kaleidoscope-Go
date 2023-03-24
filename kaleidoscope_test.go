@@ -127,10 +127,10 @@ func TestLexerBadFloat(t *testing.T) {
 
 	// TODO decide what the goal for this test actually is
 	want := NumberToken{"9.3"}
-	
+
 	// Consume the token to trigger the error
 	got := <-ch
-	
+
 	matchTokens(in, want, got, t)
 }
 
@@ -161,7 +161,7 @@ func TestEmpty(t *testing.T) {
 	go lexer.Run()
 
 	want := EOFToken{}
-	
+
 	got := <-ch
 	matchTokens(in, want, got, t)
 }
