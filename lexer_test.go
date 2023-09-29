@@ -165,3 +165,17 @@ func TestEmpty(t *testing.T) {
 	got := <-ch
 	matchTokens(in, want, got, t)
 }
+
+func TestLexSpace(t *testing.T) {
+	in := "\n  \r  \n extern"
+	lexer := newTestLexer(in)
+	ch := lexer.Tokens()
+
+	go lexer.Run()
+
+	want := ExternToken{}
+
+	got := <-ch
+
+	matchTokens(in, want, got, t)
+}
